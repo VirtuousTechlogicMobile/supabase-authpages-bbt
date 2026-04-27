@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Confirmed</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #f9f9f9;
+      text-align: center;
+      padding: 24px;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 12px; }
+    p  { color: #555; margin-bottom: 24px; }
+    button {
+      display: none;
+      padding: 12px 28px;
+      background: #4F46E5;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:hover { background: #4338CA; }
+  </style>
+</head>
+<body>
+  <h1 id="heading">Confirming your email...</h1>
+  <p id="status">Please wait.</p>
+  <button id="openAppBtn">Open App</button>
+
+  <script>
+    const params     = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
+    const accessToken  = hashParams.get('access_token')  || params.get('access_token');
+    const refreshToken = hashParams.get('refresh_token') || params.get('refresh_token');
+    const errorDesc    = hashParams.get('error_description') || params.get('error_description');
+
+    const heading  = document.getElementById('heading');
+    const status   = document.getElementById('status');
+    const btn      = document.getElementById('openAppBtn');
+
+    if (errorDesc) {
+      // Supabase returned an error (e.g. expired link)
+      heading.textContent = 'Link Expired';
+      status.textContent  = errorDesc || 'This confirmation link has expired. Please sign up again.';
+
+    } else if (accessToken) {
+      heading.textContent = 'Email Confirmed!';
+      status.textContent  = 'Redirecting you to the app...';
+
+      const deepLink = `myapp://confirmed?access_token=${accessToken}&refresh_token=${refreshToken}`;
+
+      setTimeout(() => {
+        window.location.href = deepLink;
+
+        // Show button after a delay — only if app didn't open
+        setTimeout(() => {
+          status.textContent  = 'If the app didn\'t open, tap the button below.';
+          btn.style.display   = 'inline-block';
+          btn.onclick = () => { window.location.href = deepLink; };
+        }, 2000);
+
+      }, 1500);
+
+    } else {
+      heading.textContent = 'Something went wrong';
+      status.textContent  = 'No confirmation token found. Please try signing up again.';
+    }
+  </script>
+</body>
+</html>
