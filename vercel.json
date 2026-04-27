@@ -1,8 +1,6 @@
 {
-  "routes": [
-    {
-      "src": "/confirm",
-      "dest": "/confirm.html"
-    }
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/confirm.html", "destination": "/confirm.html" }
   ]
 }
