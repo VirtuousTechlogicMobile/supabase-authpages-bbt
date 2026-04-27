@@ -1,6 +1,6 @@
 {
-  "outputDirectory": "",
+  "outputDirectory": "public",
   "rewrites": [
-    { "source": "/confirm.html", "destination": "/confirm.html" }
+    { "source": "/index.html", "destination": "/index.html" }
   ]
 }
