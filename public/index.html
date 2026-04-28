@@ -2,80 +2,159 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Email Confirmed</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Healthcare AI Auth Debug</title>
+
   <style>
-    body {
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      margin: 0;
-      background: #f9f9f9;
-      text-align: center;
-      padding: 24px;
+    body{
+    font-family:monospace;
+    padding:24px;
+    background:#0f0f0f;
+    color:#e0e0e0;
+    font-size:14px;
+    line-height:1.8;
     }
-    h1 { font-size: 1.5rem; margin-bottom: 12px; }
-    p  { color: #555; margin-bottom: 24px; }
-    button {
-      display: none;
-      padding: 12px 28px;
-      background: #4F46E5;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
+
+    h2{
+    color:#7dd3fc;
+    margin-top:24px;
     }
-    button:hover { background: #4338CA; }
+
+    .val{color:#86efac;}
+    .null{color:#f87171;}
+    .url{
+    color:#fbbf24;
+    word-break:break-all;
+    }
+
+    .box{
+    background:#1a1a1a;
+    border:1px solid #333;
+    border-radius:8px;
+    padding:16px;
+    margin:12px 0;
+    }
+
+    button{
+    margin-top:20px;
+    padding:10px 24px;
+    background:#4F46E5;
+    color:white;
+    border:none;
+    border-radius:8px;
+    font-size:14px;
+    cursor:pointer;
+    }
   </style>
 </head>
+
 <body>
-  <h1 id="heading">Confirming your email...</h1>
-  <p id="status">Please wait.</p>
-  <button id="openAppBtn">Open App</button>
 
-  <script>
-    const params     = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+<h2>Healthcare AI Auth Debug</h2>
 
-    const accessToken  = hashParams.get('access_token')  || params.get('access_token');
-    const refreshToken = hashParams.get('refresh_token') || params.get('refresh_token');
-    const errorDesc    = hashParams.get('error_description') || params.get('error_description');
+<div class="box">
+  <strong>Full URL:</strong><br>
+  <span class="url" id="fullUrl"></span>
+</div>
 
-    const heading  = document.getElementById('heading');
-    const status   = document.getElementById('status');
-    const btn      = document.getElementById('openAppBtn');
+<div class="box">
+  <strong>Hash:</strong><br>
+  <span class="url" id="rawHash"></span>
+</div>
 
-    if (errorDesc) {
-      // Supabase returned an error (e.g. expired link)
-      heading.textContent = 'Link Expired';
-      status.textContent  = errorDesc || 'This confirmation link has expired. Please sign up again.';
+<div class="box">
+  <strong>Search:</strong><br>
+  <span class="url" id="rawSearch"></span>
+</div>
 
-    } else if (accessToken) {
-      heading.textContent = 'Email Confirmed!';
-      status.textContent  = 'Redirecting you to the app...';
+<h2>Parsed Values</h2>
 
-      const deepLink = `myapp://confirmed?access_token=${accessToken}&refresh_token=${refreshToken}`;
+<div class="box">
+  <div>access_token → <span id="at"></span></div>
+  <div>refresh_token → <span id="rt"></span></div>
+  <div>type → <span id="tp"></span></div>
+  <div>error → <span id="er"></span></div>
+  <div>error_description → <span id="ed"></span></div>
+</div>
 
-      setTimeout(() => {
-        window.location.href = deepLink;
+<h2>Result</h2>
+<div class="box" id="result"></div>
 
-        // Show button after a delay — only if app didn't open
-        setTimeout(() => {
-          status.textContent  = 'If the app didn\'t open, tap the button below.';
-          btn.style.display   = 'inline-block';
-          btn.onclick = () => { window.location.href = deepLink; };
-        }, 2000);
+<button id="deepBtn" style="display:none">Open App</button>
 
-      }, 1500);
+<script>
 
-    } else {
-      heading.textContent = 'Something went wrong';
-      status.textContent  = 'No confirmation token found. Please try signing up again.';
-    }
-  </script>
+  const p = new URLSearchParams(window.location.search);
+  const h = new URLSearchParams(window.location.hash.substring(1));
+
+  document.getElementById('fullUrl').textContent = window.location.href;
+  document.getElementById('rawHash').textContent = window.location.hash || '(empty)';
+  document.getElementById('rawSearch').textContent = window.location.search || '(empty)';
+
+  function show(id,val){
+  const el=document.getElementById(id);
+
+  if(val){
+  el.textContent=val;
+  el.className='val';
+  }else{
+  el.textContent='(null)';
+  el.className='null';
+  }
+  }
+
+  const at = h.get('access_token') || p.get('access_token');
+  const rt = h.get('refresh_token') || p.get('refresh_token');
+  const tp = h.get('type') || p.get('type');
+  const er = h.get('error') || p.get('error');
+  const ed = h.get('error_description') || p.get('error_description');
+
+  show('at',at);
+  show('rt',rt);
+  show('tp',tp);
+  show('er',er);
+  show('ed',ed);
+
+  const result=document.getElementById('result');
+  const btn=document.getElementById('deepBtn');
+
+  if(ed || er){
+
+  result.innerHTML='<span class="null">ERROR: '+(ed || er)+'</span>';
+
+  }else if(at){
+
+  const params=new URLSearchParams();
+
+  params.set("access_token",at);
+
+  if(rt){
+  params.set("refresh_token",rt);
+  }
+
+  const deepLink=`healthcareai://confirmed?${params.toString()}`;
+
+  result.innerHTML=
+  '<span class="val">Token found! Opening app...</span><br><span class="url">'+deepLink+'</span>';
+
+  btn.style.display='inline-block';
+
+  btn.onclick=()=>{
+  window.open(deepLink,"_self");
+  };
+
+  setTimeout(()=>{
+  window.open(deepLink,"_self");
+  },3000);
+
+  }else{
+
+  result.innerHTML=
+  '<span class="null">No token found. Supabase redirect issue likely.</span>';
+
+  }
+
+</script>
+
 </body>
 </html>
