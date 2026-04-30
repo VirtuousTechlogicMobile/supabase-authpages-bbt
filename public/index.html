@@ -1,117 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Healthcare AI Auth</title>
-  <style>
-    body { font-family: monospace; padding: 24px; background: #0f0f0f; color: #e0e0e0; font-size: 14px; line-height: 1.8; }
-    h2 { color: #7dd3fc; margin-top: 24px; }
-    .val { color: #86efac; } .null { color: #f87171; }
-    .url { color: #fbbf24; word-break: break-all; }
-    .box { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 16px; margin: 12px 0; }
-    button { margin-top: 20px; padding: 10px 24px; background: #4F46E5; color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; }
-    #loader { font-size: 20px; color: #7dd3fc; }
-  </style>
+  <meta charset="UTF-8">
+  <title>Bio Body Track - Confirming...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-
-<h2>Healthcare AI – Email Confirmation</h2>
-<div class="box" id="loader">⏳ Processing your confirmation link...</div>
-<div class="box" style="display:none" id="debugBox">
-  <strong>Full URL:</strong><br><span class="url" id="fullUrl"></span>
-</div>
-<div class="box" id="result"></div>
-<button id="deepBtn" style="display:none">Open App</button>
-
-<!-- Load Supabase JS (handles PKCE exchange automatically) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<p>Opening Bio Body Track...</p>
 <script>
-  // ── CONFIG ──────────────────────────────────────────────
-  const SUPABASE_URL  = 'https://vgqkwikldtjxfktsxptn.supabase.co'; // 🔴 replace
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZncWt3aWtsZHRqeGZrdHN4cHRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcwMTIwODUsImV4cCI6MjA5MjU4ODA4NX0.4duRfUFxp-28cy2K5Nusz64uECDyzSqguY5XXPESfeo';                    // 🔴 replace
-  // ────────────────────────────────────────────────────────
+  (function () {
+    // Supabase puts tokens in the URL fragment (#)
+    const hash = window.location.hash;
+    const params = new URLSearchParams(hash.replace('#', ''));
 
-  const { createClient } = supabase;
-  const sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
-    auth: {
-      flowType: 'pkce',           // must match your Supabase project setting
-      detectSessionInUrl: true,   // auto-handles ?code= exchange
+    const accessToken = params.get('access_token');
+    const refreshToken = params.get('refresh_token');
+    const type = params.get('type'); // 'magiclink', 'recovery', etc.
+
+    if (accessToken) {
+      // Redirect to your app's deep link scheme
+      const deepLink =
+        'com.datadrivennetworks.biobodytrack://login-callback/' +
+        '#access_token=' + accessToken +
+        '&refresh_token=' + (refreshToken || '') +
+        '&type=' + (type || 'magiclink');
+
+      window.location.href = deepLink;
+
+      // Fallback: if app not installed after 2 seconds, show message
+      setTimeout(function () {
+        document.body.innerHTML =
+          '<h2>Could not open the app.</h2><p>Please make sure Bio Body Track is installed.</p>';
+      }, 2000);
+    } else {
+      document.body.innerHTML =
+        '<h2>Invalid or expired link.</h2><p>Please request a new link.</p>';
     }
-  });
-
-  const resultEl  = document.getElementById('result');
-  const loaderEl  = document.getElementById('loader');
-  const btn       = document.getElementById('deepBtn');
-  const debugBox  = document.getElementById('debugBox');
-  const fullUrlEl = document.getElementById('fullUrl');
-
-  fullUrlEl.textContent = window.location.href;
-
-  function openApp(at, rt) {
-    const params = new URLSearchParams({ access_token: at });
-    if (rt) params.set('refresh_token', rt);
-    const deepLink = `healthcareai://confirmed?${params}`;
-
-    resultEl.innerHTML =
-      `<span class="val">✅ Confirmed! Redirecting to app...</span><br>` +
-      `<span class="url">${deepLink}</span>`;
-
-    btn.style.display = 'inline-block';
-    btn.onclick = () => window.open(deepLink, '_self');
-    setTimeout(() => window.open(deepLink, '_self'), 2500);
-  }
-
-  function showError(msg) {
-    loaderEl.style.display = 'none';
-    debugBox.style.display = 'block';
-    resultEl.innerHTML = `<span class="null">❌ ${msg}</span>`;
-  }
-
-  async function init() {
-    // 1️⃣ Check for OAuth/PKCE error in URL first
-    const p  = new URLSearchParams(window.location.search);
-    const h  = new URLSearchParams(window.location.hash.substring(1));
-    const er = h.get('error') || p.get('error');
-    const ed = h.get('error_description') || p.get('error_description');
-    if (er || ed) { showError(ed || er); return; }
-
-    // 2️⃣ Let Supabase JS auto-exchange the ?code= (PKCE)
-    //    getSession() triggers the exchange if code is present in URL
-    try {
-      const { data, error } = await sb.auth.getSession();
-
-      if (error) { showError(error.message); return; }
-
-      if (data?.session?.access_token) {
-        loaderEl.style.display = 'none';
-        openApp(data.session.access_token, data.session.refresh_token);
-        return;
-      }
-    } catch(e) {
-      showError('Session exchange failed: ' + e.message);
-      return;
-    }
-
-    // 3️⃣ Fallback: implicit flow (token in hash/search)
-    const at = h.get('access_token') || p.get('access_token');
-    const rt = h.get('refresh_token') || p.get('refresh_token');
-    if (at) {
-      loaderEl.style.display = 'none';
-      openApp(at, rt);
-      return;
-    }
-
-    // 4️⃣ Nothing found
-    showError(
-      'No token or code found in URL.<br>' +
-      'Check: Supabase → Auth → URL Configuration → Redirect URLs includes<br>' +
-      '<span class="url">https://supabase-authpages-bbt.vercel.app/index.html</span>'
-    );
-    debugBox.style.display = 'block';
-  }
-
-  init();
+  })();
 </script>
 </body>
 </html>
