@@ -9,16 +9,32 @@
 <p>Opening Bio Body Track...</p>
 <script>
   (function () {
-    // Supabase puts tokens in the URL fragment (#)
+    // PKCE flow sends ?code= as query parameter
+    const searchParams = new URLSearchParams(window.location.search);
+    const code = searchParams.get('code');
+
+    // Legacy flow sends #access_token in fragment
     const hash = window.location.hash;
-    const params = new URLSearchParams(hash.replace('#', ''));
+    const hashParams = new URLSearchParams(hash.replace('#', ''));
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+    const type = hashParams.get('type');
 
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
-    const type = params.get('type'); // 'magiclink', 'recovery', etc.
+    if (code) {
+      // ✅ PKCE: pass code as query param to app
+      const deepLink =
+        'com.datadrivennetworks.biobodytrack://login-callback' +
+        '?code=' + encodeURIComponent(code);
 
-    if (accessToken) {
-      // Redirect to your app's deep link scheme
+      window.location.href = deepLink;
+
+      setTimeout(function () {
+        document.body.innerHTML =
+          '<h2>Could not open the app.</h2><p>Please make sure Bio Body Track is installed.</p>';
+      }, 2000);
+
+    } else if (accessToken) {
+      // Legacy token flow
       const deepLink =
         'com.datadrivennetworks.biobodytrack://login-callback/' +
         '#access_token=' + accessToken +
@@ -27,14 +43,14 @@
 
       window.location.href = deepLink;
 
-      // Fallback: if app not installed after 2 seconds, show message
       setTimeout(function () {
         document.body.innerHTML =
           '<h2>Could not open the app.</h2><p>Please make sure Bio Body Track is installed.</p>';
       }, 2000);
+
     } else {
       document.body.innerHTML =
-        '<h2>Invalid or expired link.</h2><p>Please request a new link.</p>';
+        '<h2>Invalid or expired link.</h2><p>Please request a new confirmation email.</p>';
     }
   })();
 </script>
